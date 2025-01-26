@@ -18,6 +18,7 @@ const Poll = () => {
         fetch("https://crypto-poll.onrender.com/cryptos")
             .then((response) => response.json())
             .then((data) => {
+                console.log("Fetched cryptos:", data); // Debugging
                 setCryptos(data);
                 setTopVotes(data);
                 setLoading(false);
@@ -29,9 +30,11 @@ const Poll = () => {
     }, []);
 
     // Filter cryptos based on search term
-    const filteredCryptos = cryptos.filter((crypto) =>
-        crypto.symbol.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredCryptos = cryptos.filter((crypto) => {
+        const matches = crypto.symbol.toLowerCase().includes(searchTerm.toLowerCase());
+        console.log("Search term:", searchTerm, "Crypto:", crypto.symbol, "Matches:", matches); // Debugging
+        return matches;
+    });
 
     // Handle voting
     const handleVote = (symbol) => {
@@ -39,8 +42,8 @@ const Poll = () => {
 
         fetch("https://crypto-poll.onrender.com/vote", {
             method: "POST",
-            headers: { "Content-Type": "text/plain" }, // Send as plain text
-            body: symbol, // Send the symbol as a plain string
+            headers: { "Content-Type": "text/plain" },
+            body: symbol,
         })
             .then((response) => response.json())
             .then(() => {
@@ -152,6 +155,7 @@ const Poll = () => {
                             placeholder="Type to search and select a coin..."
                             value={searchTerm}
                             onChange={(e) => {
+                                console.log("Search term updated:", e.target.value); // Debugging
                                 setSearchTerm(e.target.value);
                                 setDropdownOpen(true);
                             }}
@@ -166,6 +170,7 @@ const Poll = () => {
                                             key={crypto.symbol}
                                             className="p-2 cursor-pointer hover:bg-purple-50"
                                             onClick={() => {
+                                                console.log("Selected Crypto:", crypto.symbol); // Debugging
                                                 setSelectedCrypto(crypto.symbol);
                                                 setSearchTerm(crypto.symbol);
                                                 setDropdownOpen(false);
