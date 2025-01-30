@@ -37,7 +37,7 @@ const CreatePoll = () => {
     };
 
     try {
-      const response = await fetch("http://localhost:3000/polls", {
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/polls`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",

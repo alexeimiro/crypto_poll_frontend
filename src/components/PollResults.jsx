@@ -15,7 +15,7 @@ const PollResults = () => {
     }
 
     try {
-      const response = await fetch(`http://localhost:3000/polls/${pollId}/results`);
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/polls/${pollId}/results`);
       if (!response.ok) {
         throw new Error(`Error: ${response.statusText}`);
       }
