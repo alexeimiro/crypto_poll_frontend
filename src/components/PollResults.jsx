@@ -16,26 +16,26 @@ const PollResults = () => {
       }
 
       const response = await fetch(
-        `${process.env.REACT_APP_API_URL}/polls/${pollId}/results`
+        `${process.env.REACT_APP_API_URL}/polls/${pollId}/results`,
+        {
+          method: 'GET',
+          headers: {
+            'Accept': 'application/json', // Ensure JSON response
+          },
+        }
       );
 
-      const responseText = await response.text();
-      let responseData;
-
-      try {
-        responseData = responseText ? JSON.parse(responseText) : {};
-      } catch (parseError) {
-        console.error('Failed to parse response:', parseError);
-        throw new Error('Invalid server response');
-      }
-
+      // Check if the response is okay
       if (!response.ok) {
-        const errorMessage = responseData.error || `HTTP error! status: ${response.status}`;
-        throw new Error(errorMessage);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
+      // Parse the JSON response
+      const responseData = await response.json();
       setPollResults(responseData);
     } catch (err) {
+      console.error('Poll results fetch error:', err);
       setError(err.message);
       setPollResults(null);
     } finally {
