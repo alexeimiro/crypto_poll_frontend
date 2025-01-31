@@ -19,25 +19,29 @@ const PollResults = () => {
         `${process.env.REACT_APP_API_URL}/polls/${pollId}/results`,
         {
           method: 'GET',
-          headers: {
-            'Accept': 'application/json', // Ensure JSON response
-          },
+          headers: { 'Accept': 'application/json' },
         }
       );
 
-      // Check if the response is okay
+      if (response.status === 404) {
+        throw new Error('Poll not found - please check the ID');
+      }
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
         throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
       }
 
-      // Parse the JSON response
       const responseData = await response.json();
       setPollResults(responseData);
+      
     } catch (err) {
       console.error('Poll results fetch error:', err);
-      setError(err.message);
-      setPollResults(null);
+      setError(err.message.includes('404') 
+        ? `Poll ID ${pollId} not found`
+        : err.message
+      );
+      
     } finally {
       setIsLoading(false);
     }
