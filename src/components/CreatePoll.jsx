@@ -61,17 +61,18 @@ const CreatePoll = () => {
         .map(opt => opt.trim())
         .filter(opt => opt !== '');
 
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/polls`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          title: title.trim(),
-          options: validOptions,
-          expires_at: new Date(expiresAt).toISOString(),
-        }),
-      });
+        const response = await fetch(`${process.env.REACT_APP_API_URL}/polls`, {
+          method: 'POST',
+          mode: 'cors', // Explicit CORS mode
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            title: title.trim(),
+            options: validOptions,
+            expires_at: new Date(expiresAt).toISOString(),
+          }),
+        });
 
       const responseText = await response.text();
       let responseData;
