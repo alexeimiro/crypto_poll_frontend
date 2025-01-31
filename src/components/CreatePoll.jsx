@@ -1,9 +1,9 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
 const CreatePoll = () => {
-  const [title, setTitle] = useState("");
-  const [options, setOptions] = useState(["", ""]);
-  const [expiresAt, setExpiresAt] = useState("");
+  const [title, setTitle] = useState('');
+  const [options, setOptions] = useState(['', '']);
+  const [expiresAt, setExpiresAt] = useState('');
   const [createdPoll, setCreatedPoll] = useState(null);
   const [error, setError] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -16,16 +16,34 @@ const CreatePoll = () => {
 
   const handleAddOption = () => {
     if (options.length < 10) {
-      setOptions([...options, ""]);
+      setOptions([...options, '']);
     }
   };
 
   const handleRemoveOption = (index) => {
     if (options.length > 2) {
-      const newOptions = [...options];
-      newOptions.splice(index, 1);
+      const newOptions = options.filter((_, i) => i !== index);
       setOptions(newOptions);
     }
+  };
+
+  const validateForm = () => {
+    const errors = [];
+    
+    if (!title.trim()) {
+      errors.push('Poll title is required');
+    }
+
+    const validOptions = options.filter(opt => opt.trim() !== '');
+    if (validOptions.length < 2) {
+      errors.push('At least 2 options are required');
+    }
+
+    if (!expiresAt) {
+      errors.push('Expiration date is required');
+    }
+
+    return errors;
   };
 
   const handleSubmit = async (e) => {
@@ -34,24 +52,19 @@ const CreatePoll = () => {
     setIsSubmitting(true);
 
     try {
-      // Basic validation
-      if (!title.trim()) {
-        throw new Error("Poll title is required");
+      const validationErrors = validateForm();
+      if (validationErrors.length > 0) {
+        throw new Error(validationErrors.join(', '));
       }
 
-      const validOptions = options.filter(opt => opt.trim() !== "");
-      if (validOptions.length < 2) {
-        throw new Error("At least 2 options are required");
-      }
-
-      if (!expiresAt) {
-        throw new Error("Expiration date is required");
-      }
+      const validOptions = options
+        .map(opt => opt.trim())
+        .filter(opt => opt !== '');
 
       const response = await fetch(`${process.env.REACT_APP_API_URL}/polls`, {
-        method: "POST",
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           title: title.trim(),
@@ -60,16 +73,25 @@ const CreatePoll = () => {
         }),
       });
 
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to create poll');
+      const responseText = await response.text();
+      let responseData;
+      
+      try {
+        responseData = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error('Invalid server response');
       }
 
-      setCreatedPoll(data);
-      setTitle("");
-      setOptions(["", ""]);
-      setExpiresAt("");
+      if (!response.ok) {
+        const errorMessage = responseData.error || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      setCreatedPoll(responseData);
+      setTitle('');
+      setOptions(['', '']);
+      setExpiresAt('');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -96,10 +118,10 @@ const CreatePoll = () => {
         <div>
           <label className="block font-medium mb-1">Options</label>
           {options.map((opt, index) => (
-            <div key={index} className="flex mb-2">
+            <div key={index} className="flex gap-2 mb-2">
               <input
                 type="text"
-                className="w-full border border-gray-300 rounded px-3 py-2"
+                className="flex-grow border border-gray-300 rounded px-3 py-2"
                 value={opt}
                 onChange={(e) => handleOptionChange(index, e.target.value)}
                 required={index < 2}
@@ -107,22 +129,22 @@ const CreatePoll = () => {
               {options.length > 2 && (
                 <button
                   type="button"
-                  className="ml-2 px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
+                  className="px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600 disabled:opacity-50"
                   onClick={() => handleRemoveOption(index)}
                   disabled={isSubmitting}
                 >
-                  Remove
+                  ×
                 </button>
               )}
             </div>
           ))}
           <button
             type="button"
-            className="mt-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
+            className="mt-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
             onClick={handleAddOption}
             disabled={options.length >= 10 || isSubmitting}
           >
-            + Add Option (Max 10)
+            Add Option (Max 10)
           </button>
         </div>
 
@@ -130,7 +152,7 @@ const CreatePoll = () => {
           <label className="block font-medium mb-1">Expires At</label>
           <input
             type="datetime-local"
-            className="border border-gray-300 rounded px-3 py-2 w-full"
+            className="w-full border border-gray-300 rounded px-3 py-2"
             value={expiresAt}
             onChange={(e) => setExpiresAt(e.target.value)}
             required
@@ -139,10 +161,10 @@ const CreatePoll = () => {
 
         <button
           type="submit"
-          className="px-4 py-2 bg-green-500 text-white font-semibold rounded hover:bg-green-600 disabled:bg-gray-400"
+          className="w-full py-2 px-4 bg-green-500 text-white font-semibold rounded hover:bg-green-600 disabled:opacity-50"
           disabled={isSubmitting}
         >
-          {isSubmitting ? "Creating..." : "Create Poll"}
+          {isSubmitting ? 'Creating Poll...' : 'Create Poll'}
         </button>
       </form>
 

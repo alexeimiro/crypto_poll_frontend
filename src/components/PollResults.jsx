@@ -1,7 +1,7 @@
-import React, { useState } from "react";
+import React, { useState } from 'react';
 
 const PollResults = () => {
-  const [pollId, setPollId] = useState("");
+  const [pollId, setPollId] = useState('');
   const [pollResults, setPollResults] = useState(null);
   const [error, setError] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -12,20 +12,29 @@ const PollResults = () => {
 
     try {
       if (!pollId.trim()) {
-        throw new Error("Please enter a valid Poll ID");
+        throw new Error('Please enter a Poll ID');
       }
 
       const response = await fetch(
         `${process.env.REACT_APP_API_URL}/polls/${pollId}/results`
       );
-      
-      const data = await response.json();
 
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to fetch results');
+      const responseText = await response.text();
+      let responseData;
+
+      try {
+        responseData = responseText ? JSON.parse(responseText) : {};
+      } catch (parseError) {
+        console.error('Failed to parse response:', parseError);
+        throw new Error('Invalid server response');
       }
 
-      setPollResults(data);
+      if (!response.ok) {
+        const errorMessage = responseData.error || `HTTP error! status: ${response.status}`;
+        throw new Error(errorMessage);
+      }
+
+      setPollResults(responseData);
     } catch (err) {
       setError(err.message);
       setPollResults(null);
@@ -43,17 +52,17 @@ const PollResults = () => {
         <div className="flex gap-2">
           <input
             type="text"
-            className="w-full border border-gray-300 rounded px-3 py-2"
+            className="flex-grow border border-gray-300 rounded px-3 py-2"
             value={pollId}
             onChange={(e) => setPollId(e.target.value)}
             placeholder="Enter Poll ID"
           />
           <button
             onClick={handleFetchResults}
-            className="px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-600 disabled:bg-gray-400"
+            className="px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50"
             disabled={isLoading || !pollId.trim()}
           >
-            {isLoading ? "Loading..." : "Get Results"}
+            {isLoading ? 'Loading...' : 'Get Results'}
           </button>
         </div>
       </div>
@@ -67,12 +76,12 @@ const PollResults = () => {
       {pollResults && (
         <div className="mt-6 p-4 border border-gray-200 rounded">
           <h3 className="text-lg font-bold mb-2">Poll Results</h3>
-          <p className="mb-2"><strong>Total Votes:</strong> {pollResults.total_votes}</p>
+          <p className="mb-3"><strong>Total Votes:</strong> {pollResults.total_votes}</p>
           
           <div className="overflow-x-auto">
             <table className="min-w-full">
-              <thead>
-                <tr className="bg-gray-50">
+              <thead className="bg-gray-50">
+                <tr>
                   <th className="px-4 py-2 text-left">Option</th>
                   <th className="px-4 py-2 text-center">Votes</th>
                   <th className="px-4 py-2 text-right">Percentage</th>
