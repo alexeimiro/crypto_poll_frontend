@@ -6,6 +6,7 @@ const CreatePoll = () => {
   const [expiresAt, setExpiresAt] = useState("");
   const [createdPoll, setCreatedPoll] = useState(null);
   const [error, setError] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOptionChange = (index, value) => {
     const newOptions = [...options];
@@ -14,45 +15,65 @@ const CreatePoll = () => {
   };
 
   const handleAddOption = () => {
-    setOptions([...options, ""]);
+    if (options.length < 10) {
+      setOptions([...options, ""]);
+    }
   };
 
   const handleRemoveOption = (index) => {
-    const newOptions = [...options];
-    newOptions.splice(index, 1);
-    setOptions(newOptions);
+    if (options.length > 2) {
+      const newOptions = [...options];
+      newOptions.splice(index, 1);
+      setOptions(newOptions);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError(null);
-
-    // Format the data as required by backend
-    const pollData = {
-      title,
-      options,
-      // If your backend is expecting a specific RFC3339 or ISO8601 date-time,
-      // you can handle it here. For simplicity:
-      expires_at: new Date(expiresAt).toISOString(),
-    };
+    setIsSubmitting(true);
 
     try {
+      // Basic validation
+      if (!title.trim()) {
+        throw new Error("Poll title is required");
+      }
+
+      const validOptions = options.filter(opt => opt.trim() !== "");
+      if (validOptions.length < 2) {
+        throw new Error("At least 2 options are required");
+      }
+
+      if (!expiresAt) {
+        throw new Error("Expiration date is required");
+      }
+
       const response = await fetch(`${process.env.REACT_APP_API_URL}/polls`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(pollData),
+        body: JSON.stringify({
+          title: title.trim(),
+          options: validOptions,
+          expires_at: new Date(expiresAt).toISOString(),
+        }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
+        throw new Error(data.error || 'Failed to create poll');
       }
 
-      const data = await response.json();
       setCreatedPoll(data);
+      setTitle("");
+      setOptions(["", ""]);
+      setExpiresAt("");
     } catch (err) {
       setError(err.message);
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -61,7 +82,6 @@ const CreatePoll = () => {
       <h2 className="text-2xl font-bold mb-4">Create a New Poll</h2>
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* Title */}
         <div>
           <label className="block font-medium mb-1">Poll Title</label>
           <input
@@ -73,7 +93,6 @@ const CreatePoll = () => {
           />
         </div>
 
-        {/* Options */}
         <div>
           <label className="block font-medium mb-1">Options</label>
           {options.map((opt, index) => (
@@ -83,13 +102,14 @@ const CreatePoll = () => {
                 className="w-full border border-gray-300 rounded px-3 py-2"
                 value={opt}
                 onChange={(e) => handleOptionChange(index, e.target.value)}
-                required
+                required={index < 2}
               />
               {options.length > 2 && (
                 <button
                   type="button"
-                  className="ml-2 px-3 py-2 bg-red-500 text-white rounded"
+                  className="ml-2 px-3 py-2 bg-red-500 text-white rounded hover:bg-red-600"
                   onClick={() => handleRemoveOption(index)}
+                  disabled={isSubmitting}
                 >
                   Remove
                 </button>
@@ -98,58 +118,47 @@ const CreatePoll = () => {
           ))}
           <button
             type="button"
-            className="mt-2 px-3 py-2 bg-blue-500 text-white rounded"
+            className="mt-2 px-3 py-2 bg-blue-500 text-white rounded hover:bg-blue-600"
             onClick={handleAddOption}
+            disabled={options.length >= 10 || isSubmitting}
           >
-            + Add Option
+            + Add Option (Max 10)
           </button>
         </div>
 
-        {/* Expires At */}
         <div>
           <label className="block font-medium mb-1">Expires At</label>
           <input
             type="datetime-local"
-            className="border border-gray-300 rounded px-3 py-2"
+            className="border border-gray-300 rounded px-3 py-2 w-full"
             value={expiresAt}
             onChange={(e) => setExpiresAt(e.target.value)}
             required
           />
         </div>
 
-        {/* Submit */}
         <button
           type="submit"
-          className="px-4 py-2 bg-green-500 text-white font-semibold rounded hover:bg-green-600"
+          className="px-4 py-2 bg-green-500 text-white font-semibold rounded hover:bg-green-600 disabled:bg-gray-400"
+          disabled={isSubmitting}
         >
-          Create Poll
+          {isSubmitting ? "Creating..." : "Create Poll"}
         </button>
       </form>
 
-      {/* Error */}
       {error && (
-        <p className="text-red-500 font-medium mt-4">
-          Error creating poll: {error}
-        </p>
+        <div className="mt-4 p-3 bg-red-100 text-red-700 rounded">
+          <strong>Error:</strong> {error}
+        </div>
       )}
 
-      {/* Show created poll info */}
       {createdPoll && (
         <div className="mt-6 p-4 border border-gray-200 rounded">
-          <h3 className="text-lg font-bold mb-2">Poll Created Successfully:</h3>
-          <p>
-            <strong>ID:</strong> {createdPoll.id}
-          </p>
-          <p>
-            <strong>Title:</strong> {createdPoll.title}
-          </p>
-          <p>
-            <strong>Expires At:</strong>{" "}
-            {new Date(createdPoll.expires_at).toLocaleString()}
-          </p>
-          <p>
-            <strong>Options:</strong>
-          </p>
+          <h3 className="text-lg font-bold mb-2">Poll Created Successfully</h3>
+          <p><strong>ID:</strong> {createdPoll.id}</p>
+          <p><strong>Title:</strong> {createdPoll.title}</p>
+          <p><strong>Expires At:</strong> {new Date(createdPoll.expires_at).toLocaleString()}</p>
+          <p><strong>Options:</strong></p>
           <ul className="list-disc list-inside">
             {createdPoll.options?.map((opt, idx) => (
               <li key={idx}>{opt}</li>

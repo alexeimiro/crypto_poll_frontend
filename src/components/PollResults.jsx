@@ -4,26 +4,33 @@ const PollResults = () => {
   const [pollId, setPollId] = useState("");
   const [pollResults, setPollResults] = useState(null);
   const [error, setError] = useState(null);
+  const [isLoading, setIsLoading] = useState(false);
 
   const handleFetchResults = async () => {
     setError(null);
-    setPollResults(null);
-
-    if (!pollId) {
-      setError("Please enter a Poll ID.");
-      return;
-    }
+    setIsLoading(true);
 
     try {
-      const response = await fetch(`${process.env.REACT_APP_API_URL}/polls/${pollId}/results`);
-      if (!response.ok) {
-        throw new Error(`Error: ${response.statusText}`);
+      if (!pollId.trim()) {
+        throw new Error("Please enter a valid Poll ID");
       }
 
+      const response = await fetch(
+        `${process.env.REACT_APP_API_URL}/polls/${pollId}/results`
+      );
+      
       const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch results');
+      }
+
       setPollResults(data);
     } catch (err) {
       setError(err.message);
+      setPollResults(null);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -33,53 +40,57 @@ const PollResults = () => {
 
       <div className="mb-4">
         <label className="block font-medium mb-1">Poll ID</label>
-        <input
-          type="text"
-          className="w-full border border-gray-300 rounded px-3 py-2"
-          value={pollId}
-          onChange={(e) => setPollId(e.target.value)}
-          placeholder="Enter Poll ID"
-        />
+        <div className="flex gap-2">
+          <input
+            type="text"
+            className="w-full border border-gray-300 rounded px-3 py-2"
+            value={pollId}
+            onChange={(e) => setPollId(e.target.value)}
+            placeholder="Enter Poll ID"
+          />
+          <button
+            onClick={handleFetchResults}
+            className="px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-600 disabled:bg-gray-400"
+            disabled={isLoading || !pollId.trim()}
+          >
+            {isLoading ? "Loading..." : "Get Results"}
+          </button>
+        </div>
       </div>
-      <button
-        onClick={handleFetchResults}
-        className="px-4 py-2 bg-blue-500 text-white font-semibold rounded hover:bg-blue-600"
-      >
-        Get Results
-      </button>
 
       {error && (
-        <p className="text-red-500 font-medium mt-4">
-          Error fetching results: {error}
-        </p>
+        <div className="mt-4 p-3 bg-red-100 text-red-700 rounded">
+          <strong>Error:</strong> {error}
+        </div>
       )}
 
       {pollResults && (
         <div className="mt-6 p-4 border border-gray-200 rounded">
-          <h3 className="text-lg font-bold mb-2">Poll Results:</h3>
-          <p>
-            <strong>Total Votes:</strong> {pollResults.total_votes}
-          </p>
-          <table className="min-w-full bg-white mt-4">
-            <thead>
-              <tr>
-                <th className="border px-4 py-2">Option</th>
-                <th className="border px-4 py-2">Votes</th>
-                <th className="border px-4 py-2">Percentage</th>
-              </tr>
-            </thead>
-            <tbody>
-              {pollResults.options.map((option, idx) => (
-                <tr key={idx}>
-                  <td className="border px-4 py-2">{option.text}</td>
-                  <td className="border px-4 py-2">{option.votes}</td>
-                  <td className="border px-4 py-2">
-                    {option.percentage.toFixed(2)}%
-                  </td>
+          <h3 className="text-lg font-bold mb-2">Poll Results</h3>
+          <p className="mb-2"><strong>Total Votes:</strong> {pollResults.total_votes}</p>
+          
+          <div className="overflow-x-auto">
+            <table className="min-w-full">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="px-4 py-2 text-left">Option</th>
+                  <th className="px-4 py-2 text-center">Votes</th>
+                  <th className="px-4 py-2 text-right">Percentage</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {pollResults.options.map((option, idx) => (
+                  <tr key={idx} className="border-t">
+                    <td className="px-4 py-2">{option.text}</td>
+                    <td className="px-4 py-2 text-center">{option.votes}</td>
+                    <td className="px-4 py-2 text-right">
+                      {option.percentage.toFixed(2)}%
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
       )}
     </div>
