@@ -64,6 +64,7 @@ const CreatePoll = () => {
     try {
       const validOptions = options.map(opt => opt.trim()).filter(opt => opt !== '');
 
+      // Make the API request
       const response = await fetch(`${process.env.REACT_APP_API_URL}/polls`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -74,14 +75,16 @@ const CreatePoll = () => {
         }),
       });
 
+      // Handle response
+      const textResponse = await response.text(); // Read response as text
+      const responseData = textResponse ? JSON.parse(textResponse) : {};
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+        throw new Error(responseData.error || `HTTP error! status: ${response.status}`);
       }
 
-      // Parse the response data
-      const responseData = await response.json();
-      setCreatedPoll(responseData); // Store the created poll data
+      // Set the created poll data
+      setCreatedPoll(responseData);
 
       // Reset form fields
       setTitle('');
@@ -89,6 +92,7 @@ const CreatePoll = () => {
       setExpiresAt('');
       
     } catch (err) {
+      console.error('Error creating poll:', err);
       setError(err.message);
      } finally {
       setIsSubmitting(false);

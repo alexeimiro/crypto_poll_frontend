@@ -20,10 +20,6 @@ const PollResults = () => {
              { method: 'GET', headers: { 'Accept': 'application/json' } }
          );
 
-         if (response.status === 404) {
-             throw new Error('Poll not found - please check the ID');
-         }
-
          if (!response.ok) {
              const errorData = await response.json().catch(() => ({}));
              throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
