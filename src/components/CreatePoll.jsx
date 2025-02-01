@@ -9,91 +9,97 @@ const CreatePoll = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleOptionChange = (index, value) => {
-      const newOptions = [...options];
-      newOptions[index] = value;
-      setOptions(newOptions);
+    const newOptions = [...options];
+    newOptions[index] = value;
+    setOptions(newOptions);
   };
 
   const handleAddOption = () => {
-      if (options.length < 10) {
-          setOptions([...options, '']);
-      }
+    if (options.length < 10) {
+      setOptions([...options, '']);
+    }
   };
 
   const handleRemoveOption = (index) => {
-      if (options.length > 2) {
-          const newOptions = options.filter((_, i) => i !== index);
-          setOptions(newOptions);
-      }
+    if (options.length > 2) {
+      const newOptions = options.filter((_, i) => i !== index);
+      setOptions(newOptions);
+    }
   };
 
   const validateForm = () => {
-      const errors = [];
-      
-      if (!title.trim()) {
-          errors.push('Poll title is required');
-      }
+    const errors = [];
+    
+    if (!title.trim()) {
+      errors.push('Poll title is required');
+    }
 
-      const validOptions = options.filter(opt => opt.trim() !== '');
-      if (validOptions.length < 2) {
-          errors.push('At least 2 options are required');
-      }
+    const validOptions = options.filter(opt => opt.trim() !== '');
+    if (validOptions.length < 2) {
+      errors.push('At least 2 options are required');
+    }
 
-      if (!expiresAt) {
-          errors.push('Expiration date is required');
-      }
+    if (!expiresAt) {
+      errors.push('Expiration date is required');
+    }
 
-      return errors;
+    return errors;
   };
 
   const handleSubmit = async (e) => {
-      e.preventDefault();
-      
-      setError(null);
-      
-      // Validate form before submission
-      const validationErrors = validateForm();
-      
-      if (validationErrors.length > 0) {
-          setError(validationErrors.join(', '));
-          return;
+    e.preventDefault();
+    
+    setError(null);
+    
+    // Validate form before submission
+    const validationErrors = validateForm();
+    
+    if (validationErrors.length > 0) {
+      setError(validationErrors.join(', '));
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    try {
+      const validOptions = options.map(opt => opt.trim()).filter(opt => opt !== '');
+
+      const response = await fetch(`${process.env.REACT_APP_API_URL}/polls`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          title: title.trim(),
+          options: validOptions,
+          expires_at: new Date(expiresAt).toISOString(),
+        }),
+      });
+
+      const contentType = response.headers.get('content-type');
+      let responseData;
+
+      if (contentType?.includes('application/json')) {
+        responseData = await response.json();
+      } else {
+        const textResponse = await response.text();
+        responseData = { error: textResponse };
       }
 
-      setIsSubmitting(true);
+      if (!response.ok) throw new Error(responseData.error || `HTTP error! status: ${response.status}`);
 
-      try {
-          const validOptions = options.map(opt => opt.trim()).filter(opt => opt !== '');
+      console.log("Created Poll Data:", responseData); // Log created poll data
+      setCreatedPoll(responseData);
 
-          const response = await fetch(`${process.env.REACT_APP_API_URL}/polls`, {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({
-                  title: title.trim(),
-                  options: validOptions,
-                  expires_at: new Date(expiresAt).toISOString(),
-              }),
-          });
-
-          const textResponse = await response.text(); // Read response as text first
-          console.log("Response Text:", textResponse); // Log raw response text
-          const responseData = textResponse ? JSON.parse(textResponse) : {};
-
-          if (!response.ok) throw new Error(responseData.error || `HTTP error! status: ${response.status}`);
-
-          console.log("Created Poll Data:", responseData); // Log created poll data
-          setCreatedPoll(responseData);
-
-          // Reset form fields
-          setTitle('');
-          setOptions(['', '']);
-          setExpiresAt('');
-          
-      } catch (err) {
-          console.error('Error creating poll:', err);
-          setError(err.message);
-         } finally {
-          setIsSubmitting(false);
-         }
+      // Reset form fields
+      setTitle('');
+      setOptions(['', '']);
+      setExpiresAt('');
+      
+    } catch (err) {
+      console.error('Error creating poll:', err);
+      setError(err.message);
+     } finally {
+      setIsSubmitting(false);
+     }
   };
 
 return (
