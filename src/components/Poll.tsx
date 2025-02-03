@@ -27,17 +27,17 @@ const API_URL = config.API_URL || process.env.REACT_APP_API_URL;
 const LOCAL_STORAGE_KEY = 'votedPolls';
 
 // Helper functions
-const getVotedPolls = (): Record<string, boolean> => 
+const getVotedPolls = (): Record<string, boolean> =>
   JSON.parse(localStorage.getItem(LOCAL_STORAGE_KEY) || '{}');
 
-const hasVoted = (pollId: string): boolean => 
+const hasVoted = (pollId: string): boolean =>
   !!getVotedPolls()[pollId];
 
 const markAsVoted = (pollId: string): void => {
   const votedPolls = getVotedPolls();
   localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({
     ...votedPolls,
-    [pollId]: true
+    [pollId]: true,
   }));
 };
 
@@ -64,7 +64,7 @@ const fetchResults = async (): Promise<VoteResult[]> => {
   return response.data;
 };
 
-// Main Component
+// Main Poll Component
 export default function Poll() {
   const [poll, setPoll] = useState<Poll | null>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -77,14 +77,15 @@ export default function Poll() {
       const pollData = await fetchCurrentPoll();
       setPoll(pollData);
       setVoted(hasVoted(pollData.id));
-      
+
+      // If poll expired, show results immediately
       if (Date.now() > new Date(pollData.expires_at).getTime()) {
         const resultsData = await fetchResults();
         setResults(resultsData);
       }
     } catch (err) {
-      const error = err as AxiosError<ApiError>;
-      setError(error.response?.data.message || 'Failed to load poll data');
+      const axiosError = err as AxiosError<ApiError>;
+      setError(axiosError.response?.data.message || 'Failed to load poll data');
     }
   }, []);
 
@@ -103,16 +104,17 @@ export default function Poll() {
       await submitVote(selectedOption);
       markAsVoted(poll.id);
       setVoted(true);
-      
+
+      // Optionally, refresh the results after voting
       const resultsData = await fetchResults();
       setResults(resultsData);
     } catch (err) {
-      const error = err as AxiosError<ApiError>;
-      setError(error.response?.data.message || 'Vote submission failed');
+      const axiosError = err as AxiosError<ApiError>;
+      setError(axiosError.response?.data.message || 'Vote submission failed');
     }
   };
 
-  // Render helpers
+  // Render error helper
   const renderError = (message: string) => (
     <div className="text-center p-8 text-red-600">
       {message}
@@ -135,7 +137,8 @@ export default function Poll() {
   );
 }
 
-// Sub-components
+// PollContainer and Sub–components
+
 interface PollContainerProps {
   poll: Poll;
   error: string;
@@ -159,9 +162,9 @@ const PollContainer = ({
   const expiryDate = new Date(poll.expires_at);
 
   return (
-    <div className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-md">
+    <div className="max-w-xl mx-auto p-6 bg-white rounded-3xl shadow-2xl">
       <PollHeader title={poll.title} expiryDate={expiryDate} />
-      
+
       {error && (
         <div className="mb-4 p-3 bg-red-100 text-red-700 rounded-lg">
           {error}
@@ -183,18 +186,20 @@ const PollContainer = ({
 };
 
 const PollHeader = ({ title, expiryDate }: { title: string; expiryDate: Date }) => (
-  <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6">
-    <h2 className="text-2xl font-bold text-gray-800 mb-4 sm:mb-0">{title}</h2>
+  <div className="flex flex-col sm:flex-row justify-between items-center mb-6">
+    <h2 className="text-3xl font-bold text-gray-800">{title}</h2>
     <CountdownTimer expiryDate={expiryDate} />
   </div>
 );
 
 const CountdownTimer = ({ expiryDate }: { expiryDate: Date }) => (
-  <div className="text-sm bg-gray-100 px-3 py-1 rounded-lg text-gray-600">
+  <div className="text-sm bg-blue-50 text-blue-600 px-3 py-1 rounded-full font-medium">
     <Countdown 
       date={expiryDate}
       renderer={({ days, hours, minutes, seconds }) => (
-        <span>Ends in: {days}d {hours}h {minutes}m {seconds}s</span>
+        <span>
+          Ends in: {days}d {hours}h {minutes}m {seconds}s
+        </span>
       )}
     />
   </div>
@@ -211,38 +216,33 @@ const VotingOptions = ({
   onSelect: (index: number) => void;
   onSubmit: () => void;
 }) => (
-  <div className="space-y-3">
+  <div className="space-y-4">
     {options.map((option, index) => (
       <button
         key={index}
         onClick={() => onSelect(index)}
-        className={`w-full p-4 text-left rounded-lg transition-all ${
-          selectedOption === index
-            ? 'bg-blue-50 border-2 border-blue-500'
-            : 'bg-gray-50 hover:bg-gray-100'
-        }`}
+        className={`w-full py-3 px-4 rounded-full border-2 transition-all 
+          ${selectedOption === index 
+            ? 'bg-blue-600 text-white border-blue-600' 
+            : 'bg-white text-gray-700 border-gray-300 hover:bg-blue-50'}`
+        }
       >
         {option}
       </button>
     ))}
-    
-    <VoteButton 
-      disabled={selectedOption === null}
-      onClick={onSubmit}
-    />
-  </div>
-);
 
-const VoteButton = ({ disabled, onClick }: { disabled: boolean; onClick: () => void }) => (
-  <button
-    onClick={onClick}
-    disabled={disabled}
-    className={`mt-4 w-full py-3 rounded-lg text-white transition-colors ${
-      disabled ? 'bg-gray-400 cursor-not-allowed' : 'bg-blue-500 hover:bg-blue-600'
-    }`}
-  >
-    Submit Vote
-  </button>
+    <button 
+      onClick={onSubmit}
+      disabled={selectedOption === null}
+      className={`mt-4 w-full py-3 rounded-full font-semibold transition-colors 
+        ${selectedOption === null 
+          ? 'bg-gray-300 cursor-not-allowed'
+          : 'bg-blue-600 hover:bg-blue-700 text-white'}`
+      }
+    >
+      Submit Vote
+    </button>
+  </div>
 );
 
 const ResultsDisplay = ({
@@ -254,22 +254,22 @@ const ResultsDisplay = ({
   results: VoteResult[];
   totalVotes: number;
 }) => (
-  <div className="space-y-4">
-    <div className="flex items-center gap-2 text-gray-600 mb-4">
-      <ChartBarIcon className="w-6 h-6" />
-      <span className="text-lg font-semibold">Live Results</span>
+  <div className="space-y-6">
+    <div className="flex items-center justify-center gap-2 text-blue-600 mb-4">
+      <ChartBarIcon className="w-8 h-8" />
+      <span className="text-xl font-bold">Live Results</span>
     </div>
-    
+
     {options.map((option, index) => {
       const result = results.find(r => r.option_index === index);
       const count = result?.count || 0;
-      const percent = totalVotes > 0 ? 
-        ((count / totalVotes) * 100).toFixed(1) : 
-        '0.0';
+      const percent = totalVotes > 0 
+        ? ((count / totalVotes) * 100).toFixed(1) 
+        : '0.0';
 
       return (
         <div key={index} className="space-y-2">
-          <div className="flex justify-between text-sm font-medium text-gray-600">
+          <div className="flex justify-between text-sm font-medium text-gray-700">
             <span>{option}</span>
             <span>{percent}% ({count})</span>
           </div>
@@ -281,9 +281,9 @@ const ResultsDisplay = ({
 );
 
 const ProgressBar = ({ percent }: { percent: number }) => (
-  <div className="h-3 bg-gray-200 rounded-full overflow-hidden">
-    <div 
-      className="h-full bg-blue-500 transition-all duration-500"
+  <div className="w-full bg-gray-200 rounded-full h-4 overflow-hidden">
+    <div
+      className="bg-blue-500 h-full rounded-full transition-all duration-500"
       style={{ width: `${percent}%` }}
       role="progressbar"
       aria-valuenow={percent}
