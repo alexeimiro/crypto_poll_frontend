@@ -3,6 +3,8 @@ import axios, { AxiosError } from 'axios';
 import Countdown from 'react-countdown';
 import { ChartBarIcon } from '@heroicons/react/24/outline';
 import config from '../config';
+import React from 'react';
+
 
 // Type definitions
 interface Poll {
