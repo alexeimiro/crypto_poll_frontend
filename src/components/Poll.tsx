@@ -8,11 +8,18 @@ interface Poll {
   title: string;
   options: string[];
   expires_at: string;
+  created_at: string;
 }
 
 interface VoteResult {
   option_index: number;
   count: number;
+}
+
+// Validate environment variable
+const API_URL = process.env.REACT_APP_API_URL;
+if (!API_URL) {
+  console.error('REACT_APP_API_URL environment variable is not set');
 }
 
 export default function Poll() {
@@ -23,35 +30,40 @@ export default function Poll() {
   const [voted, setVoted] = useState(false);
 
   useEffect(() => {
+    if (!API_URL) {
+      setError('Backend service is not configured properly');
+      return;
+    }
     fetchPoll();
-    checkVoted();
   }, []);
 
   const fetchPoll = async () => {
     try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/polls/current`);
-      setPoll(response.data);
+      const response = await axios.get<Poll>(`${API_URL}/api/polls/current`);
+      const pollData = response.data;
+      setPoll(pollData);
+      checkVoted(pollData.id);
+      if (Date.now() > new Date(pollData.expires_at).getTime()) {
+        fetchResults();
+      }
     } catch (err) {
       setError('No active poll available');
     }
   };
 
-  const checkVoted = () => {
-    if (poll) {
-      const votedPolls = JSON.parse(localStorage.getItem('votedPolls') || '{}');
-      setVoted(votedPolls[poll.id]);
-    }
+  const checkVoted = (pollId: string) => {
+    const votedPolls = JSON.parse(localStorage.getItem('votedPolls') || '{}');
+    setVoted(!!votedPolls[pollId]);
   };
 
   const handleVote = async () => {
-    if (selectedOption === null || !poll) return;
+    if (selectedOption === null || !poll || !API_URL) return;
 
     try {
-      await axios.post(`${process.env.REACT_APP_API_URL}/api/votes`, {
+      await axios.post(`${API_URL}/api/votes`, {
         option_index: selectedOption
       });
 
-      // Mark user as voted
       const votedPolls = JSON.parse(localStorage.getItem('votedPolls') || '{}');
       votedPolls[poll.id] = true;
       localStorage.setItem('votedPolls', JSON.stringify(votedPolls));
@@ -64,13 +76,23 @@ export default function Poll() {
   };
 
   const fetchResults = async () => {
+    if (!API_URL) return;
+    
     try {
-      const response = await axios.get(`${process.env.REACT_APP_API_URL}/api/results`);
+      const response = await axios.get<VoteResult[]>(`${API_URL}/api/results`);
       setResults(response.data);
     } catch (err) {
       setError('Failed to load results');
     }
   };
+
+  if (!API_URL) {
+    return (
+      <div className="text-center p-8 text-red-600">
+        Error: Backend service URL not configured
+      </div>
+    );
+  }
 
   if (!poll) {
     return (
@@ -82,6 +104,14 @@ export default function Poll() {
 
   const totalVotes = results.reduce((acc, result) => acc + result.count, 0);
   const expiryDate = new Date(poll.expires_at);
+
+  if (isNaN(expiryDate.getTime())) {
+    return (
+      <div className="text-center p-8 text-red-600">
+        Error: Invalid poll expiration date
+      </div>
+    );
+  }
 
   return (
     <div className="max-w-2xl mx-auto p-6 bg-white rounded-xl shadow-md">
@@ -145,7 +175,9 @@ export default function Poll() {
           {poll.options.map((option, index) => {
             const result = results.find(r => r.option_index === index);
             const count = result?.count || 0;
-            const percent = totalVotes > 0 ? ((count / totalVotes) * 100).toFixed(1) : 0;
+            const percent = totalVotes > 0 ? 
+              ((count / totalVotes) * 100).toFixed(1) : 
+              '0.0';
 
             return (
               <div key={index} className="space-y-2">
