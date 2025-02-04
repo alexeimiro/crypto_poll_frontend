@@ -1,4 +1,4 @@
-// CreatePoll.jsx
+// src/components/CreatePoll.jsx
 import React, { useState } from "react";
 
 const CreatePoll = () => {
@@ -22,7 +22,7 @@ const CreatePoll = () => {
     setError(null);
 
     try {
-      const apiUrl = import.meta.env.VITE_API_URL; // Use Vite's env variable syntax
+      const apiUrl = import.meta.env.VITE_API_URL;
 
       if (!apiUrl) {
         throw new Error("API URL is not defined. Please set it in your .env file.");

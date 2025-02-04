@@ -1,4 +1,4 @@
-// Poll.jsx
+// src/components/Poll.jsx
 import React, { useEffect, useState } from "react";
 
 const Poll = () => {
@@ -10,7 +10,7 @@ const Poll = () => {
   useEffect(() => {
     const fetchPoll = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL; // Use Vite's env variable syntax
+        const apiUrl = import.meta.env.VITE_API_URL;
 
         if (!apiUrl) {
           throw new Error("API URL is not defined. Please set it in your .env file.");
@@ -29,7 +29,7 @@ const Poll = () => {
 
     const fetchResults = async () => {
       try {
-        const apiUrl = import.meta.env.VITE_API_URL; // Use Vite's env variable syntax
+        const apiUrl = import.meta.env.VITE_API_URL;
 
         if (!apiUrl) {
           throw new Error("API URL is not defined. Please set it in your .env file.");
@@ -52,7 +52,7 @@ const Poll = () => {
 
   const handleVote = async (optionIndex) => {
     try {
-      const apiUrl = import.meta.env.VITE_API_URL; // Use Vite's env variable syntax
+      const apiUrl = import.meta.env.VITE_API_URL;
 
       if (!apiUrl) {
         throw new Error("API URL is not defined. Please set it in your .env file.");
