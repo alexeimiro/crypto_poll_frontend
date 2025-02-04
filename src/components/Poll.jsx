@@ -9,7 +9,8 @@ const Poll = () => {
   useEffect(() => {
     const fetchPoll = async () => {
       try {
-        const response = await fetch("/api/polls/current");
+        const apiUrl = process.env.REACT_APP_API_URL;
+        const response = await fetch(`${apiUrl}/api/polls/current`);
         if (!response.ok) {
           throw new Error("No active poll");
         }
@@ -22,7 +23,8 @@ const Poll = () => {
 
     const fetchResults = async () => {
       try {
-        const response = await fetch("/api/results");
+        const apiUrl = process.env.REACT_APP_API_URL;
+        const response = await fetch(`${apiUrl}/api/results`);
         if (!response.ok) {
           throw new Error("Failed to fetch results");
         }
@@ -39,7 +41,8 @@ const Poll = () => {
 
   const handleVote = async (optionIndex) => {
     try {
-      const response = await fetch("/api/votes", {
+      const apiUrl = process.env.REACT_APP_API_URL;
+      const response = await fetch(`${apiUrl}/api/votes`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
