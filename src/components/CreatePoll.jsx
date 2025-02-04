@@ -1,3 +1,4 @@
+// CreatePoll.jsx
 import React, { useState } from "react";
 
 const CreatePoll = () => {
@@ -21,7 +22,12 @@ const CreatePoll = () => {
     setError(null);
 
     try {
-      const apiUrl = process.env.REACT_APP_API_URL;
+      const apiUrl = import.meta.env.VITE_API_URL; // Use Vite's env variable syntax
+
+      if (!apiUrl) {
+        throw new Error("API URL is not defined. Please set it in your .env file.");
+      }
+
       const response = await fetch(`${apiUrl}/api/polls`, {
         method: "POST",
         headers: {
