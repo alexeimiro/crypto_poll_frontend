@@ -1,118 +1,130 @@
-import React, { useState } from 'react';
+import React, { useState } from "react";
 
 const CreatePoll = () => {
-  const [title, setTitle] = useState('');
-  const [options, setOptions] = useState(['', '']);
+  const [title, setTitle] = useState("");
+  const [options, setOptions] = useState(["Option 1", "Option 2"]);
   const [expiresInMinutes, setExpiresInMinutes] = useState(60);
-  const [message, setMessage] = useState('');
+  const [error, setError] = useState(null);
 
   const handleAddOption = () => {
-    setOptions([...options, '']);
+    setOptions([...options, `Option ${options.length + 1}`]);
   };
 
   const handleRemoveOption = (index) => {
-    if (options.length <= 2) return;
-    const newOptions = options.filter((_, i) => i !== index);
-    setOptions(newOptions);
-  };
-
-  const handleOptionChange = (index, value) => {
-    const newOptions = [...options];
-    newOptions[index] = value;
-    setOptions(newOptions);
+    if (options.length > 2) {
+      setOptions(options.filter((_, i) => i !== index));
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!title.trim() || options.some(opt => !opt.trim()) || options.length < 2) {
-      setMessage('Please fill all fields with at least 2 options');
-      return;
-    }
+    setError(null);
 
     try {
-      const response = await fetch('/api/polls', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/polls", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
           title,
-          options: options.map(opt => opt.trim()),
-          expires_in_minutes: expiresInMinutes
+          options,
+          expires_in_minutes: expiresInMinutes,
         }),
       });
 
-      if (!response.ok) throw new Error('Failed to create poll');
-      
-      setMessage('Poll created successfully!');
-      setTitle('');
-      setOptions(['', '']);
+      if (!response.ok) {
+        throw new Error("Failed to create poll");
+      }
+
+      alert("Poll created successfully!");
+      setTitle("");
+      setOptions(["Option 1", "Option 2"]);
       setExpiresInMinutes(60);
-    } catch (error) {
-      setMessage(error.message);
+    } catch (err) {
+      setError(err.message);
     }
   };
 
   return (
-    <div className="create-poll">
-      <h2>Create New Poll</h2>
+    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-4">Create a Poll</h2>
       <form onSubmit={handleSubmit}>
-        <div className="form-group">
-          <label>Poll Title:</label>
+        <div className="mb-4">
+          <label htmlFor="title" className="block text-sm font-medium text-gray-700">
+            Title
+          </label>
           <input
             type="text"
+            id="title"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             required
           />
         </div>
 
-        <div className="form-group">
-          <label>Options:</label>
-          {options.map((option, index) => (
-            <div key={index} className="option-input">
-              <input
-                type="text"
-                value={option}
-                onChange={(e) => handleOptionChange(index, e.target.value)}
-                required
-              />
-              {index > 1 && (
-                <button
-                  type="button"
-                  className="remove-option"
-                  onClick={() => handleRemoveOption(index)}
-                >
-                  ×
-                </button>
-              )}
-            </div>
-          ))}
-          <button
-            type="button"
-            className="add-option"
-            onClick={handleAddOption}
-          >
-            Add Option
-          </button>
-        </div>
+        {options.map((option, index) => (
+          <div key={index} className="mb-4">
+            <label
+              htmlFor={`option-${index}`}
+              className="block text-sm font-medium text-gray-700"
+            >
+              Option {index + 1}
+            </label>
+            <input
+              type="text"
+              id={`option-${index}`}
+              value={option}
+              onChange={(e) =>
+                setOptions(
+                  options.map((opt, i) => (i === index ? e.target.value : opt))
+                )
+              }
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+              required
+            />
+            <button
+              type="button"
+              onClick={() => handleRemoveOption(index)}
+              className="mt-2 text-red-500 hover:text-red-700"
+            >
+              Remove Option
+            </button>
+          </div>
+        ))}
 
-        <div className="form-group">
-          <label>Duration (minutes):</label>
+        <div className="mb-4">
+          <label htmlFor="expires" className="block text-sm font-medium text-gray-700">
+            Expires In (minutes)
+          </label>
           <input
             type="number"
-            min="1"
+            id="expires"
             value={expiresInMinutes}
-            onChange={(e) => setExpiresInMinutes(Math.max(1, e.target.value))}
+            onChange={(e) => setExpiresInMinutes(Number(e.target.value))}
+            className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
             required
           />
         </div>
 
-        <button type="submit" className="submit-btn">
+        <button
+          type="button"
+          onClick={handleAddOption}
+          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+        >
+          Add Option
+        </button>
+
+        <button
+          type="submit"
+          className="mt-4 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+        >
           Create Poll
         </button>
-      </form>
 
-      {message && <div className="message">{message}</div>}
+        {error && <p className="mt-4 text-red-500">{error}</p>}
+      </form>
     </div>
   );
 };

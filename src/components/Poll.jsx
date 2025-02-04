@@ -1,103 +1,104 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from "react";
 
 const Poll = () => {
   const [poll, setPoll] = useState(null);
+  const [vote, setVote] = useState(-1);
   const [results, setResults] = useState([]);
-  const [hasVoted, setHasVoted] = useState(false);
-  const [error, setError] = useState('');
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchPoll = async () => {
       try {
-        const response = await fetch('/api/polls/current');
-        if (!response.ok) throw new Error('Failed to fetch poll');
-        const pollData = await response.json();
-        
-        if (pollData) {
-          setPoll(pollData);
-          const isExpired = new Date(pollData.expires_at) < new Date();
-          const voted = localStorage.getItem(`voted_${pollData.id}`);
-
-          if (isExpired || voted) {
-            fetchResults();
-            setHasVoted(true);
-          }
+        const response = await fetch("/api/polls/current");
+        if (!response.ok) {
+          throw new Error("No active poll");
         }
-      } catch (error) {
-        setError(error.message);
+        const data = await response.json();
+        setPoll(data);
+      } catch (err) {
+        setError(err.message);
+      }
+    };
+
+    const fetchResults = async () => {
+      try {
+        const response = await fetch("/api/results");
+        if (!response.ok) {
+          throw new Error("Failed to fetch results");
+        }
+        const data = await response.json();
+        setResults(data);
+      } catch (err) {
+        console.error(err);
       }
     };
 
     fetchPoll();
+    fetchResults();
   }, []);
-
-  const fetchResults = async () => {
-    try {
-      const response = await fetch('/api/results');
-      if (!response.ok) throw new Error('Failed to fetch results');
-      const resultsData = await response.json();
-      setResults(resultsData);
-    } catch (error) {
-      setError(error.message);
-    }
-  };
 
   const handleVote = async (optionIndex) => {
     try {
-      const response = await fetch('/api/votes', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await fetch("/api/votes", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({ option_index: optionIndex }),
       });
 
-      if (!response.ok) throw new Error('Vote failed');
-      
-      localStorage.setItem(`voted_${poll.id}`, 'true');
-      setHasVoted(true);
-      fetchResults();
-    } catch (error) {
-      setError(error.message);
+      if (!response.ok) {
+        throw new Error("Failed to submit vote");
+      }
+
+      alert("Vote submitted successfully!");
+      setVote(optionIndex);
+    } catch (err) {
+      setError(err.message);
     }
   };
 
-  if (!poll) return <div>Loading poll...</div>;
+  if (error) {
+    return <p className="text-red-500">{error}</p>;
+  }
 
-  const isExpired = new Date(poll.expires_at) < new Date();
-  const options = poll.options || [];
+  if (!poll) {
+    return <p>Loading...</p>;
+  }
 
   return (
-    <div className="poll">
-      <h2>{poll.title}</h2>
-      {isExpired && <div className="expired-notice">This poll has closed</div>}
-
-      {error && <div className="error">{error}</div>}
-
-      {!isExpired && !hasVoted ? (
-        <div className="voting-options">
-          {options.map((option, index) => (
+    <div className="max-w-md mx-auto p-6 bg-white rounded-lg shadow-md">
+      <h2 className="text-2xl font-bold mb-4">{poll.title}</h2>
+      <ul>
+        {poll.options?.map((option, index) => (
+          <li key={index} className="mb-4">
             <button
-              key={index}
-              className="vote-btn"
+              type="button"
               onClick={() => handleVote(index)}
+              disabled={vote !== -1 || vote === index}
+              className={`w-full px-4 py-2 border rounded-md ${
+                vote === index
+                  ? "bg-green-500 text-white"
+                  : "bg-gray-100 text-gray-800 hover:bg-gray-200"
+              }`}
             >
               {option}
             </button>
-          ))}
-        </div>
-      ) : (
-        <div className="results">
-          <h3>Results:</h3>
-          {options.map((option, index) => {
-            const count = results.find(r => r[0] === index)?.[1] || 0;
-            return (
-              <div key={index} className="result-item">
-                <div className="option-label">{option}</div>
-                <div className="vote-count">{count} votes</div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+          </li>
+        ))}
+      </ul>
+
+      <h3 className="text-xl font-bold mt-6 mb-4">Results</h3>
+      <ul>
+        {poll.options?.map((option, index) => (
+          <li key={index} className="flex justify-between items-center mb-2">
+            <span>{option}</span>
+            <span>
+              {results.find((r) => r[0] === index)?.[1] || 0} votes
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 };
